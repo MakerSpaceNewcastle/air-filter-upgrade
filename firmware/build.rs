@@ -36,16 +36,29 @@ fn main() {
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 
     // Load the config for the specific controller and set the required environment variables
-    let config = std::fs::read_to_string(env!("CONFIG")).unwrap();
-    let config: Config = toml::from_str(&config).unwrap();
-
-    println!(
-        "cargo::rustc-env=BOARD_TEMP_SENSOR_ADDRESS={}",
-        config.board_temperature_sensor_address
-    );
+    Config::load_and_set();
 }
 
 #[derive(Deserialize)]
 struct Config {
     board_temperature_sensor_address: u64,
+}
+
+impl Config {
+    fn load_and_set() {
+        let config = Self::load(env!("CONFIG"));
+        config.set_env_vars();
+    }
+
+    fn load(filename: &str) -> Self {
+        let config = std::fs::read_to_string(filename).unwrap();
+        toml::from_str(&config).unwrap()
+    }
+
+    fn set_env_vars(&self) {
+        println!(
+            "cargo::rustc-env=BOARD_TEMP_SENSOR_ADDRESS={}",
+            self.board_temperature_sensor_address
+        );
+    }
 }
