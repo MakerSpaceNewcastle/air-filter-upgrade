@@ -31,7 +31,7 @@ jobs:
           CONFIG: ./configs/test.toml
         run: |
           eval "$(nix print-dev-env)"
-          set +x
+          set -x
 
           rustup target add thumbv6m-none-eabi
           rustup show
@@ -57,7 +57,7 @@ jobs:
           CONFIG: ./configs/test.toml
         run: |
           eval "$(nix print-dev-env)"
-          set +x
+          set -x
 
           rustup target add thumbv6m-none-eabi
           rustup show
