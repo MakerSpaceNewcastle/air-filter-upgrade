@@ -1,0 +1,22 @@
+---
+name: Formatting
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+
+      - name: Format
+        run: |
+          eval "$(nix print-dev-env)"
+          treefmt --fail-on-change
