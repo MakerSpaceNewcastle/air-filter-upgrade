@@ -41,7 +41,7 @@ fn main() {
 
 #[derive(Deserialize)]
 struct Config {
-    board_temperature_sensor_address: u64,
+    board_temperature_sensor_address: String,
 }
 
 impl Config {
