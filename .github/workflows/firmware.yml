@@ -22,19 +22,13 @@ jobs:
       run:
         working-directory: ./firmware
 
-    strategy:
-      matrix:
-        config:
-          - test.toml
-          - south-basement-workshop.toml
-
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v30
 
       - name: Clippy
         env:
-          CONFIG: "./configs/${{ matrix.config }}"
+          CONFIG: ./configs/test.yml
         run: |
           eval "$(nix print-dev-env)"
           set -x
