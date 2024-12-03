@@ -1,5 +1,5 @@
 use defmt::{info, warn};
-use ds18b20::Ds18b20;
+use ds18b20::{Ds18b20, Resolution};
 use embassy_rp::gpio::{Level, OutputOpenDrain};
 use embassy_time::{Delay, Duration, Ticker, Timer};
 use one_wire_bus::{Address, OneWire};
@@ -16,6 +16,10 @@ pub(super) async fn task(r: crate::OnewireResources) {
         info!("Found one wire device at address: {}", device_address.0);
     }
 
+    info!(
+        "Configured board temperature sensor address: {}",
+        env!("BOARD_TEMP_SENSOR_ADDRESS")
+    );
     let onboard_temp_sensor =
         Ds18b20::new::<()>(Address(env!("BOARD_TEMP_SENSOR_ADDRESS").parse().unwrap())).unwrap();
 
@@ -26,7 +30,7 @@ pub(super) async fn task(r: crate::OnewireResources) {
 
         ds18b20::start_simultaneous_temp_measurement(&mut bus, &mut Delay).unwrap();
 
-        Timer::after_millis(ds18b20::Resolution::Bits12.max_measurement_time_millis() as u64).await;
+        Timer::after_millis(Resolution::Bits12.max_measurement_time_millis() as u64).await;
 
         // TODO: do something sensible with the temperature readings
         match onboard_temp_sensor.read_data(&mut bus, &mut Delay) {
