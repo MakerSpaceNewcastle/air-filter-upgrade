@@ -57,7 +57,7 @@ assign_resources::assign_resources! {
         pir_b: PIN_10, // Input 5
     },
     ui_buttons: UiButtonResources {
-        speed: PIN_8, // Input 7
+        speed: PIN_9, // Input 6
     },
     onewire: OnewireResources {
         data: PIN_22,
