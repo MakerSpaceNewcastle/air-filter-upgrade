@@ -1,5 +1,5 @@
 use crate::{
-    fan::{FanSpeed, FAN_SPEED},
+    fan::{FanCommand, FanSpeed, FAN_SPEED},
     maybe_timer::MaybeTimer,
     presence_sensors::{Presence, PRESENCE_EVENTS},
     ui_buttons::{UiEvent, UI_EVENTS},
@@ -31,10 +31,10 @@ struct State {
 }
 
 impl State {
-    fn get_fan_signal(&self) -> Option<FanSpeed> {
+    fn get_fan_command(&self) -> FanCommand {
         match self.fan {
-            FanRunning::Stopped => None,
-            FanRunning::Running { .. } => Some(self.fan_speed.clone()),
+            FanRunning::Stopped => FanCommand::Stop,
+            FanRunning::Running { .. } => FanCommand::Run(self.fan_speed.clone()),
         }
     }
 }
@@ -51,6 +51,8 @@ pub(crate) async fn task() {
         fan_speed: FanSpeed::Low,
         presence: Presence::Clear,
     };
+
+    let fan_tx = FAN_SPEED.publisher().unwrap();
 
     loop {
         let fan_off_time = match state.fan {
@@ -107,6 +109,6 @@ pub(crate) async fn task() {
         };
 
         info!("State: {}", state);
-        FAN_SPEED.signal(state.get_fan_signal());
+        fan_tx.publish_immediate(state.get_fan_command());
     }
 }

@@ -7,6 +7,7 @@ mod presence_sensors;
 mod run_logic;
 mod temperature_sensors;
 mod ui_buttons;
+mod wifi;
 
 use defmt::{info, unwrap};
 use defmt_rtt as _;
@@ -103,6 +104,8 @@ async fn main(_spawner: Spawner) {
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
         unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
+
+        unwrap!(spawner.spawn(crate::wifi::task(r.wifi, spawner)));
     });
 }
 

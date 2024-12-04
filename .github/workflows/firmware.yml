@@ -28,7 +28,9 @@ jobs:
 
       - name: Clippy
         env:
-          CONFIG: ./configs/test.yml
+          WIFI_PASSWORD: super secret
+          MQTT_PASSWORD: lol nope
+          CONFIG: ./configs/test.toml
         run: |
           eval "$(nix print-dev-env)"
           set -x
@@ -51,8 +53,9 @@ jobs:
     strategy:
       matrix:
         config:
-          - test.toml
+          - north-basement-workshop.toml
           - south-basement-workshop.toml
+          - test.toml
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +63,8 @@ jobs:
 
       - name: Build
         env:
+          WIFI_PASSWORD: super secret
+          MQTT_PASSWORD: lol nope
           CONFIG: "./configs/${{ matrix.config }}"
         run: |
           eval "$(nix print-dev-env)"
