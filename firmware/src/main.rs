@@ -81,7 +81,7 @@ async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
     let r = split_resources!(p);
 
-    info!("Git ref: {}", git_version::git_version!());
+    info!("Version: {}", env!("VERSION"));
 
     spawn_core1(
         p.CORE1,

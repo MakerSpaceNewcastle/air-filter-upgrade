@@ -215,11 +215,7 @@ async fn run_mqtt_client(stack: Stack<'_>) -> Result<(), ()> {
         .await?;
 
     client
-        .publish(
-            env!("VERSION_MQTT_TOPIC"),
-            git_version::git_version!().as_bytes(),
-            true,
-        )
+        .publish(env!("VERSION_MQTT_TOPIC"), env!("VERSION").as_bytes(), true)
         .await?;
 
     let mut ping_tick = Ticker::every(Duration::from_secs(5));
