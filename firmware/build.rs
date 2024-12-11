@@ -9,10 +9,7 @@
 //! new memory settings.
 
 use serde::Deserialize;
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::PathBuf;
+use std::{env, fs::File, io::Write, path::PathBuf, process::Command};
 
 fn main() {
     // Put `memory.x` in our output directory and ensure it's
@@ -35,12 +32,28 @@ fn main() {
     println!("cargo:rustc-link-arg-bins=-Tlink-rp.x");
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 
+    set_git_version();
+
     // Load the config for the specific controller and set the required environment variables
     Config::load_and_set();
 }
 
+fn set_git_version() {
+    let version = Command::new("git")
+        .arg("describe")
+        .arg("--always")
+        .arg("--dirty=-modified")
+        .output()
+        .unwrap()
+        .stdout;
+    let version = String::from_utf8(version).unwrap();
+    println!("cargo::rustc-env=VERSION={version}",);
+}
+
 #[derive(Deserialize)]
 struct Config {
+    mqtt_client_id: String,
+    mqtt_topic_prefix: String,
     board_temperature_sensor_address: String,
 }
 
@@ -51,11 +64,26 @@ impl Config {
     }
 
     fn load(filename: &str) -> Self {
+        println!("cargo:rerun-if-changed={filename}");
         let config = std::fs::read_to_string(filename).unwrap();
         toml::from_str(&config).unwrap()
     }
 
     fn set_env_vars(&self) {
+        println!("cargo::rustc-env=MQTT_CLIENT_ID={}", self.mqtt_client_id);
+        println!(
+            "cargo::rustc-env=ONLINE_MQTT_TOPIC={}online",
+            self.mqtt_topic_prefix
+        );
+        println!(
+            "cargo::rustc-env=VERSION_MQTT_TOPIC={}version",
+            self.mqtt_topic_prefix
+        );
+        println!(
+            "cargo::rustc-env=ONBOARD_TEMPERATURE_SENSOR_TOPIC={}temperatures/onboard",
+            self.mqtt_topic_prefix
+        );
+        println!("cargo::rustc-env=FAN_TOPIC={}fan", self.mqtt_topic_prefix);
         println!(
             "cargo::rustc-env=BOARD_TEMP_SENSOR_ADDRESS={}",
             self.board_temperature_sensor_address
