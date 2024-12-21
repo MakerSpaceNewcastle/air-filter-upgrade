@@ -5,6 +5,7 @@ use embassy_sync::{
     pubsub::{PubSubChannel, WaitResult},
 };
 use embassy_time::Timer;
+use serde::{Deserialize, Serialize};
 
 pub(crate) static FAN_SPEED: PubSubChannel<CriticalSectionRawMutex, FanCommand, 1, 2, 1> =
     PubSubChannel::new();
@@ -26,35 +27,12 @@ impl From<FanCommand> for &'static str {
     }
 }
 
-impl TryFrom<&str> for FanCommand {
-    type Error = ();
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "stop" => Ok(Self::Stop),
-            "low" => Ok(Self::Run(FanSpeed::Low)),
-            "medium" => Ok(Self::Run(FanSpeed::Medium)),
-            "high" => Ok(Self::Run(FanSpeed::High)),
-            _ => Err(()),
-        }
-    }
-}
-
-#[derive(Clone, Format, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Format, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum FanSpeed {
     Low,
     Medium,
     High,
-}
-
-impl FanSpeed {
-    pub(crate) fn cycle(&mut self) {
-        match self {
-            FanSpeed::Low => *self = FanSpeed::Medium,
-            FanSpeed::Medium => *self = FanSpeed::High,
-            FanSpeed::High => *self = FanSpeed::Low,
-        }
-    }
 }
 
 #[embassy_executor::task]
