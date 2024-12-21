@@ -3,10 +3,8 @@
 
 mod fan;
 mod maybe_timer;
-mod presence_sensors;
 mod run_logic;
 mod temperature_sensors;
-mod ui_buttons;
 mod wifi;
 
 use defmt::{info, unwrap};
@@ -20,6 +18,7 @@ use embassy_rp::{
 use embassy_time::{Duration, Timer};
 #[cfg(feature = "panic-probe")]
 use panic_probe as _;
+use run_logic::{ExternalCommand, ExternalFanCommand, EXTERNAL_COMMAND};
 use static_cell::StaticCell;
 
 #[cfg(not(feature = "panic-probe"))]
@@ -52,13 +51,6 @@ assign_resources::assign_resources! {
         medium: PIN_6,
         high: PIN_7,
         contactor_voltage: PIN_17,
-    },
-    presence_sensors: PresenceSensorResources {
-        pir_a: PIN_11, // Input 4
-        pir_b: PIN_10, // Input 5
-    },
-    ui_buttons: UiButtonResources {
-        speed: PIN_9, // Input 6
     },
     onewire: OnewireResources {
         data: PIN_22,
@@ -93,9 +85,6 @@ async fn main(_spawner: Spawner) {
 
                 unwrap!(spawner.spawn(crate::fan::task(r.fan_relays)));
 
-                unwrap!(spawner.spawn(crate::presence_sensors::task(r.presence_sensors)));
-                unwrap!(spawner.spawn(crate::ui_buttons::task(r.ui_buttons)));
-
                 unwrap!(spawner.spawn(crate::run_logic::task()));
             });
         },
@@ -106,6 +95,8 @@ async fn main(_spawner: Spawner) {
         unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
 
         unwrap!(spawner.spawn(crate::wifi::task(r.wifi, spawner)));
+
+        unwrap!(spawner.spawn(initial_fan_trigger_task()));
     });
 }
 
@@ -118,4 +109,19 @@ async fn watchdog_feed(r: StatusResources) {
         watchdog.feed();
         Timer::after_millis(500).await;
     }
+}
+
+#[embassy_executor::task]
+async fn initial_fan_trigger_task() {
+    let cmd_pub = EXTERNAL_COMMAND.publisher().unwrap();
+
+    Timer::after_secs(5).await;
+
+    info!("Triggering initial fan run after power on");
+    cmd_pub
+        .publish(ExternalCommand {
+            fan: Some(ExternalFanCommand::RunFor { seconds: 300 }),
+            speed: None,
+        })
+        .await;
 }

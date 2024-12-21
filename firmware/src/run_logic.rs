@@ -1,114 +1,116 @@
 use crate::{
     fan::{FanCommand, FanSpeed, FAN_SPEED},
     maybe_timer::MaybeTimer,
-    presence_sensors::{Presence, PRESENCE_EVENTS},
-    ui_buttons::{UiEvent, UI_EVENTS},
 };
 use defmt::{info, warn, Format};
-use embassy_futures::select::{select3, Either3};
-use embassy_sync::pubsub::WaitResult;
+use embassy_futures::select::{select, Either};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    pubsub::{PubSubChannel, WaitResult},
+};
 use embassy_time::{Duration, Instant};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Eq, PartialEq, Format)]
-enum FanRunning {
-    Stopped,
-    Running { until: Option<Instant> },
+#[derive(Clone, Eq, PartialEq, Format, Serialize, Deserialize)]
+pub(crate) struct ExternalCommand {
+    pub(crate) fan: Option<ExternalFanCommand>,
+    pub(crate) speed: Option<FanSpeed>,
 }
 
-impl FanRunning {
-    fn run_for(d: Duration) -> Self {
-        Self::Running {
-            until: Some(Instant::now() + d),
-        }
-    }
+#[derive(Clone, Eq, PartialEq, Format, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ExternalFanCommand {
+    Stop,
+    RunFor { seconds: u64 },
 }
+
+pub(crate) static EXTERNAL_COMMAND: PubSubChannel<
+    CriticalSectionRawMutex,
+    ExternalCommand,
+    1,
+    1,
+    2,
+> = PubSubChannel::new();
 
 #[derive(Clone, Eq, PartialEq, Format)]
 struct State {
     fan: FanRunning,
-    fan_speed: FanSpeed,
-    presence: Presence,
+    speed: FanSpeed,
 }
 
 impl State {
     fn get_fan_command(&self) -> FanCommand {
         match self.fan {
             FanRunning::Stopped => FanCommand::Stop,
-            FanRunning::Running { .. } => FanCommand::Run(self.fan_speed.clone()),
+            FanRunning::Running { .. } => FanCommand::Run(self.speed.clone()),
         }
     }
 }
 
-const TIMEOUT: Duration = Duration::from_secs(60 * 5); // 5 minutes
+#[derive(Clone, Eq, PartialEq, Format)]
+enum FanRunning {
+    Stopped,
+    Running { until: Instant },
+}
+
+impl From<ExternalFanCommand> for FanRunning {
+    fn from(value: ExternalFanCommand) -> Self {
+        match value {
+            ExternalFanCommand::Stop => Self::Stopped,
+            ExternalFanCommand::RunFor { seconds } => Self::Running {
+                until: Instant::now() + Duration::from_secs(seconds),
+            },
+        }
+    }
+}
 
 #[embassy_executor::task]
 pub(crate) async fn task() {
-    let mut presence_rx = PRESENCE_EVENTS.subscriber().unwrap();
-    let mut ui_rx = UI_EVENTS.subscriber().unwrap();
-
     let mut state = State {
         fan: FanRunning::Stopped,
-        fan_speed: FanSpeed::Low,
-        presence: Presence::Clear,
+        speed: FanSpeed::Low,
     };
 
-    let fan_tx = FAN_SPEED.publisher().unwrap();
+    let mut command_sub = EXTERNAL_COMMAND.subscriber().unwrap();
+    let fan_pub = FAN_SPEED.publisher().unwrap();
 
     loop {
         let fan_off_time = match state.fan {
             FanRunning::Stopped => None,
-            FanRunning::Running { until } => until,
+            FanRunning::Running { until } => Some(until),
         };
 
-        match select3(
-            presence_rx.next_message(),
-            ui_rx.next_message(),
-            MaybeTimer::at(fan_off_time),
-        )
-        .await
+        let new_state = match select(command_sub.next_message(), MaybeTimer::at(fan_off_time)).await
         {
-            Either3::First(msg) => match msg {
-                WaitResult::Lagged(msg_count) => {
-                    warn!(
-                        "Lagged listening to presence events, missed {} messages",
-                        msg_count
-                    )
-                }
-                WaitResult::Message(msg) => {
-                    state.presence = msg.state;
-
-                    if state.presence == Presence::Occupied {
-                        state.fan = FanRunning::run_for(TIMEOUT);
-                    }
-                }
-            },
-            Either3::Second(msg) => match msg {
-                WaitResult::Lagged(msg_count) => {
-                    warn!(
-                        "Lagged listening to UI events, missed {} messages",
-                        msg_count
-                    )
-                }
-                WaitResult::Message(UiEvent::SpeedButtonPushed) => {
-                    state.fan_speed = match state.fan {
-                        FanRunning::Running { .. } => {
-                            let mut speed = state.fan_speed.clone();
-                            speed.cycle();
-                            speed
-                        }
-                        FanRunning::Stopped => FanSpeed::Low,
-                    };
-
-                    state.fan = FanRunning::run_for(TIMEOUT);
-                }
-            },
-            Either3::Third(_) => {
+            Either::First(WaitResult::Lagged(lost)) => {
+                warn!("Command subscriber lagged, lost {} messages", lost);
+                None
+            }
+            Either::First(WaitResult::Message(cmd)) => Some(State {
+                fan: match cmd.fan {
+                    Some(fan) => fan.into(),
+                    None => state.fan.clone(),
+                },
+                speed: match cmd.speed {
+                    Some(speed) => speed,
+                    None => state.speed.clone(),
+                },
+            }),
+            Either::Second(_) => {
                 info!("Turning off fan after timeout");
-                state.fan = FanRunning::Stopped;
+                Some(State {
+                    fan: FanRunning::Stopped,
+                    speed: state.speed.clone(),
+                })
             }
         };
 
-        info!("State: {}", state);
-        fan_tx.publish_immediate(state.get_fan_command());
+        if let Some(new_state) = new_state {
+            if new_state != state {
+                state = new_state;
+                info!("State: {}", state);
+                fan_pub.publish_immediate(state.get_fan_command());
+            }
+        }
     }
 }
