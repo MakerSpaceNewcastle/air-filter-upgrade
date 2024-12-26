@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
         .collect();
 
     let subscriptions: Vec<_> = zones.iter().flat_map(|z| z.mqtt_subscriptions()).collect();
-    debug!("Subscribing to MQTT topics: {:#?}", subscriptions);
+    info!("Subscribing to MQTT topics: {:#?}", subscriptions);
     mqtt_client.subscribe_many(subscriptions).await?;
 
     let mut sensor_update_interval = tokio::time::interval(Duration::from_secs(15));
@@ -66,6 +66,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn update_zones_via_mqtt_message(zones: &mut [Zone], msg: &Publish) {
+    info!("Updating sensors via MQTT topic: {}", msg.topic);
     for zone in zones.iter_mut() {
         match zone.update_via_mqtt_message(msg) {
             Ok(Update::Updated) => {
@@ -84,7 +85,7 @@ async fn update_zones_via_mqtt_message(zones: &mut [Zone], msg: &Publish) {
 }
 
 async fn update_zones_via_time(zones: &mut [Zone]) {
-    debug!("Updating sensors on interval");
+    info!("Updating sensors on interval");
     for zone in zones.iter_mut() {
         match zone.update_via_time() {
             Ok(Update::Updated) => {

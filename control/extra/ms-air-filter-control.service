@@ -1,0 +1,10 @@
+[Unit]
+Description=Control program for automatic air filters in Maker Space
+
+[Service]
+Type=exec
+Environment="RUST_LOG=info"
+ExecStart=/usr/bin/ms-air-filter-control --config /etc/ms-air-filter-control.toml
+
+[Install]
+WantedBy=multi-user.target
