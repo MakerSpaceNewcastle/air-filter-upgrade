@@ -3,7 +3,7 @@ use crate::sensor::{
     presence::{Presence, PresenceSensor},
     SensorRead,
 };
-use log::{debug, info, warn};
+use log::{info, warn};
 use ms_air_filter_protocol::{ExternalCommand, ExternalFanCommand, FanSpeed};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -20,7 +20,7 @@ fn get_worst_air_cleanliness(
         .iter()
         .filter_map(|s| s.reading())
         .collect();
-    debug!("Air quality sensor readings: {:#?}", readings);
+    info!("Air quality sensor readings: {:#?}", readings);
 
     match readings.into_iter().filter_map(|r| r.class).min() {
         Some(cleanliness) => Ok(cleanliness),
@@ -33,7 +33,7 @@ fn get_any_presence(presence_sensors: &[PresenceSensor]) -> anyhow::Result<bool>
         .iter()
         .filter_map(|s| s.reading())
         .collect();
-    debug!("Presence sensor readings: {:#?}", readings);
+    info!("Presence sensor readings: {:#?}", readings);
 
     if readings.is_empty() {
         anyhow::bail!("no operational presence sensors")
