@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
   };
 
   outputs = {
@@ -23,6 +23,8 @@
             # Rust toolchain
             rustup
             probe-rs
+
+            # Extra tools for control program
             cargo-cross
           ];
         };
