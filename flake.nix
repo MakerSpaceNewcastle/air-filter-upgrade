@@ -26,6 +26,9 @@
 
             # Extra tools for control program
             cargo-cross
+
+            # Sensor firmware toolchain
+            esphome
           ];
         };
       }
