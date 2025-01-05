@@ -135,7 +135,7 @@ fn update_via_mqtt_message_helper<T: SensorRead<V, C> + SensorUpdate, V, C>(
                 *res = Update::Updated;
             }
             Ok(_) => {}
-            Err(e) => warn!("Failed to update sensor {} because {e}", s.name()),
+            Err(e) => warn!("Failed to update sensor: {e}"),
         }
     }
 }
@@ -150,7 +150,7 @@ fn update_via_time_helper<T: SensorRead<V, C> + SensorUpdate, V, C>(
                 *res = Update::Updated;
             }
             Ok(_) => {}
-            Err(e) => warn!("Failed to update sensor {} because {e}", s.name()),
+            Err(e) => warn!("Failed to update sensor: {e}"),
         }
     }
 }

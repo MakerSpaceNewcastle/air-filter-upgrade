@@ -5,7 +5,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub(crate) struct AirQualitySensorConfig {
-    pub(crate) name: String,
     pub(crate) topic: String,
 
     pub(crate) pre_dirty_threshold: f64,
@@ -50,10 +49,6 @@ impl From<AirQualitySensorConfig> for AirQualitySensor {
 }
 
 impl SensorRead<f64, AirCleanliness> for AirQualitySensor {
-    fn name(&self) -> &str {
-        self.config.name.as_str()
-    }
-
     fn reading(&self) -> Option<SensorReading<f64, AirCleanliness>> {
         self.reading.clone()
     }
@@ -105,7 +100,6 @@ mod test {
     #[test]
     fn basic() {
         let config = AirQualitySensorConfig {
-            name: "test sensor".into(),
             topic: "test/value".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,

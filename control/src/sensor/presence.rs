@@ -6,7 +6,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(crate) struct PresenceSensorConfig {
-    pub(crate) name: String,
     pub(crate) topic: String,
 
     pub(crate) timeout: u64,
@@ -33,10 +32,6 @@ impl From<PresenceSensorConfig> for PresenceSensor {
 }
 
 impl SensorRead<Presence, ()> for PresenceSensor {
-    fn name(&self) -> &str {
-        self.config.name.as_str()
-    }
-
     fn reading(&self) -> Option<SensorReading<Presence, ()>> {
         self.reading.clone()
     }
@@ -55,8 +50,8 @@ impl SensorUpdate for PresenceSensor {
             let s = std::str::from_utf8(&msg.payload)?;
 
             let value = match s {
-                "off" => Presence::Clear,
-                "on" => Presence::Occupied,
+                "OFF" => Presence::Clear,
+                "ON" => Presence::Occupied,
                 _ => anyhow::bail!("unexpected payload for esphome binary sensor"),
             };
 
@@ -66,8 +61,7 @@ impl SensorUpdate for PresenceSensor {
 
             info!(
                 "Setting presence sensor {} to {:?} via MQTT",
-                self.name(),
-                value
+                self.config.topic, value
             );
             self.reading = Some(SensorReading::new(value, None));
 
@@ -82,7 +76,7 @@ impl SensorUpdate for PresenceSensor {
             if last.value == Presence::Occupied && last.age().as_secs() > self.config.timeout {
                 info!(
                     "Setting presence sensor {} to unoccupied after timeout",
-                    self.name()
+                    self.config.topic
                 );
                 self.reading = Some(SensorReading::new(Presence::Clear, None));
                 Update::Updated
@@ -103,7 +97,6 @@ mod test {
     #[test]
     fn basic() {
         let config = PresenceSensorConfig {
-            name: "test sensor".into(),
             topic: "test/value".into(),
             timeout: 30,
         };
@@ -115,7 +108,7 @@ mod test {
 
         assert_eq!(
             sensor
-                .update_via_mqtt_message(&Publish::new("test/value", QoS::ExactlyOnce, b"on"))
+                .update_via_mqtt_message(&Publish::new("test/value", QoS::ExactlyOnce, b"ON"))
                 .ok(),
             Some(Update::Updated)
         );
@@ -125,14 +118,14 @@ mod test {
 
         assert_eq!(
             sensor
-                .update_via_mqtt_message(&Publish::new("test/value", QoS::ExactlyOnce, b"on"))
+                .update_via_mqtt_message(&Publish::new("test/value", QoS::ExactlyOnce, b"ON"))
                 .ok(),
             Some(Update::Updated)
         );
 
         assert_eq!(
             sensor
-                .update_via_mqtt_message(&Publish::new("test/value2", QoS::ExactlyOnce, b"off"))
+                .update_via_mqtt_message(&Publish::new("test/value2", QoS::ExactlyOnce, b"OFF"))
                 .ok(),
             Some(Update::NotUpdated)
         );
