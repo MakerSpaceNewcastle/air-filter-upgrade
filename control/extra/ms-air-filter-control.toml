@@ -8,64 +8,58 @@ password = ""
 name = "South Basement Workshop"
 
 [zones.filter]
-name = "South Basement Workshop Filter"
 command_topic = "air-filter/south~basement/fan/cmd"
 
 [[zones.air_quality]]
-name = "South Basement Workshop PM 1.0 um"
-topic = "sensors/south-basement-air-sensor/sensor/particulate_matter_1_0/state"
+topic = "sensors/south-basement/sensor/particulate_matter_1_0/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.air_quality]]
-name = "South Basement Workshop PM 2.5 um"
-topic = "sensors/south-basement-air-sensor/sensor/particulate_matter_2_5/state"
+topic = "sensors/south-basement/sensor/particulate_matter_2_5/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.air_quality]]
-name = "South Basement Workshop PM 10.0 um"
-topic = "sensors/south-basement-air-sensor/sensor/particulate_matter_10_0/state"
+topic = "sensors/south-basement/sensor/particulate_matter_10_0/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.presence]]
-name = "South Basement Workshop Presence 1"
-topic = "sensors/south-basement-air-sensor/sensor/presence-1/state"
+topic = "sensors/south-basement/binary_sensor/motion_1/state"
+timeout = 90
+
+[[zones.presence]]
+topic = "sensors/south-basement/binary_sensor/motion_2/state"
 timeout = 90
 
 [[zones]]
 name = "North Basement Workshop"
 
 [zones.filter]
-name = "North Basement Workshop Filter"
 command_topic = "air-filter/north~basement/fan/cmd"
 
 [[zones.air_quality]]
-name = "North Basement Workshop PM 1.0 um"
-topic = "sensors/north-basement-air-sensor/sensor/particulate_matter_1_0/state"
+topic = "sensors/north-basement/sensor/particulate_matter_1_0/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.air_quality]]
-name = "North Basement Workshop PM 2.5 um"
-topic = "sensors/north-basement-air-sensor/sensor/particulate_matter_2_5/state"
+topic = "sensors/north-basement/sensor/particulate_matter_2_5/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.air_quality]]
-name = "North Basement Workshop PM 10.0 um"
-topic = "sensors/north-basement-air-sensor/sensor/particulate_matter_10_0/state"
+topic = "sensors/north-basement/sensor/particulate_matter_10_0/state"
 pre_dirty_threshold = 8
 dirty_threshold = 15
 very_dirty_threshold = 50
 
 [[zones.presence]]
-name = "North Basement Workshop Presence 1"
-topic = "sensors/north-basement-air-sensor/sensor/presence-1/state"
+topic = "sensors/north-basement/binary_sensor/motion_1/state"
 timeout = 90

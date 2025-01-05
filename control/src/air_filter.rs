@@ -4,8 +4,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct AirFilterConfig {
-    #[allow(unused)]
-    name: String,
     command_topic: String,
 }
 

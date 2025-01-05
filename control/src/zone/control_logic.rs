@@ -144,14 +144,12 @@ mod test {
     #[test]
     fn presence_and_air_quality_clean_and_occupied_idle() {
         let mut presence_sensors: Vec<PresenceSensor> = vec![PresenceSensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             timeout: 0,
         }
         .into()];
 
         let mut air_quality_sensors: Vec<AirQualitySensor> = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -162,7 +160,7 @@ mod test {
         presence_sensors
             .first_mut()
             .unwrap()
-            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "on"))
+            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "ON"))
             .unwrap();
 
         air_quality_sensors
@@ -190,7 +188,6 @@ mod test {
     #[test]
     fn air_quality_only_no_sensors() {
         let air_quality_sensors = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -210,7 +207,6 @@ mod test {
     #[test]
     fn air_quality_only_idle() {
         let mut air_quality_sensors: Vec<AirQualitySensor> = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -243,7 +239,6 @@ mod test {
     #[test]
     fn air_quality_only_pre_dirty() {
         let mut air_quality_sensors: Vec<AirQualitySensor> = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -276,7 +271,6 @@ mod test {
     #[test]
     fn air_quality_only_dirty() {
         let mut air_quality_sensors: Vec<AirQualitySensor> = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -309,7 +303,6 @@ mod test {
     #[test]
     fn air_quality_only_very_dirty() {
         let mut air_quality_sensors: Vec<AirQualitySensor> = vec![AirQualitySensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             pre_dirty_threshold: 8.0,
             dirty_threshold: 15.0,
@@ -342,7 +335,6 @@ mod test {
     #[test]
     fn presence_only_no_sensors() {
         let presence_sensors = vec![PresenceSensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             timeout: 20,
         }
@@ -356,7 +348,6 @@ mod test {
     #[test]
     fn presence_only_idle() {
         let mut presence_sensors: Vec<PresenceSensor> = vec![PresenceSensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             timeout: 0,
         }
@@ -365,7 +356,7 @@ mod test {
         presence_sensors
             .first_mut()
             .unwrap()
-            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "on"))
+            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "ON"))
             .unwrap();
 
         std::thread::sleep(Duration::from_secs(2));
@@ -391,7 +382,6 @@ mod test {
     #[test]
     fn presence_only_run() {
         let mut presence_sensors: Vec<PresenceSensor> = vec![PresenceSensorConfig {
-            name: "a".into(),
             topic: "a".into(),
             timeout: 20,
         }
@@ -400,7 +390,7 @@ mod test {
         presence_sensors
             .first_mut()
             .unwrap()
-            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "on"))
+            .update_via_mqtt_message(&Publish::new("a", QoS::AtLeastOnce, "ON"))
             .unwrap();
 
         let ret =

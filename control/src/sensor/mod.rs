@@ -27,7 +27,6 @@ impl<V, C> SensorReading<V, C> {
 }
 
 pub(crate) trait SensorRead<V, C> {
-    fn name(&self) -> &str;
     fn reading(&self) -> Option<SensorReading<V, C>>;
 }
 
