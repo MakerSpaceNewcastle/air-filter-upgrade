@@ -72,13 +72,13 @@ impl Zone {
         }
     }
 
-    pub(crate) async fn evaluate_and_send_command(&self) -> anyhow::Result<()> {
+    pub(crate) async fn evaluate_and_send_command(&mut self) -> anyhow::Result<()> {
         let command = self::control_logic::stateless_process(
             self.mode(),
             &self.presence_sensors,
             &self.air_quality_sensors,
         )?;
-        info!("Air filter command for zone {}: {:?}", self.name, command);
+        info!("Air filter command for zone {}: {command:?}", self.name);
 
         self.filter.command(command).await?;
 
