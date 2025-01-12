@@ -1,3 +1,4 @@
+use log::debug;
 use ms_air_filter_protocol::ExternalCommand;
 use rumqttc::AsyncClient;
 use serde::Deserialize;
@@ -10,6 +11,7 @@ pub(crate) struct AirFilterConfig {
 pub(crate) struct AirFilter {
     mqtt_client: AsyncClient,
     config: AirFilterConfig,
+    last_command: Option<ExternalCommand>,
 }
 
 impl AirFilter {
@@ -17,20 +19,29 @@ impl AirFilter {
         Self {
             mqtt_client,
             config,
+            last_command: None,
         }
     }
 
-    pub(crate) async fn command(&self, command: ExternalCommand) -> anyhow::Result<()> {
-        let s = serde_json::to_string(&command)?;
+    pub(crate) async fn command(&mut self, command: ExternalCommand) -> anyhow::Result<()> {
+        if self.last_command == Some(command.clone()) {
+            debug!("Ignoring duplicate fan command");
+        } else {
+            debug!("Sending fan command {command:?}");
 
-        self.mqtt_client
-            .publish(
-                &self.config.command_topic,
-                rumqttc::QoS::AtLeastOnce,
-                false,
-                s,
-            )
-            .await?;
+            let s = serde_json::to_string(&command)?;
+
+            self.mqtt_client
+                .publish(
+                    &self.config.command_topic,
+                    rumqttc::QoS::AtLeastOnce,
+                    false,
+                    s,
+                )
+                .await?;
+
+            self.last_command = Some(command);
+        }
 
         Ok(())
     }

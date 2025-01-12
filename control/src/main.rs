@@ -43,8 +43,15 @@ async fn main() -> anyhow::Result<()> {
     mqtt_client.subscribe_many(subscriptions).await?;
 
     let mut sensor_update_interval = tokio::time::interval(Duration::from_secs(15));
+    let mut new_data = false;
 
     loop {
+        let control_send_wait = tokio::time::sleep(if new_data {
+            Duration::from_secs(1)
+        } else {
+            Duration::MAX
+        });
+
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
                 info!("Exiting");
@@ -53,52 +60,73 @@ async fn main() -> anyhow::Result<()> {
             event = mqtt_connection.poll() => {
                 trace!("MQTT event: {:?}", event);
                 match event {
-                    Ok(Event::Incoming(Packet::Publish(msg))) => update_zones_via_mqtt_message(&mut zones, &msg).await,
+                    Ok(Event::Incoming(Packet::Publish(msg))) => {
+                        if update_zones_via_mqtt_message(&mut zones, &msg).await == Update::Updated {
+                            new_data = true;
+                        }
+                    },
                     Err(e) => warn!("MQTT error: {:?}", e),
                     _ => {}
                 }
             }
-            _ = sensor_update_interval.tick() => update_zones_via_time(&mut zones).await,
+            _ = sensor_update_interval.tick() => {
+                if update_zones_via_time(&mut zones).await == Update::Updated {
+                    new_data = true;
+                }
+            }
+            _ = control_send_wait => {
+                evaluate_and_send_command(&mut zones).await;
+                new_data = false;
+            }
         };
     }
 
     Ok(())
 }
 
-async fn update_zones_via_mqtt_message(zones: &mut [Zone], msg: &Publish) {
+async fn update_zones_via_mqtt_message(zones: &mut [Zone], msg: &Publish) -> Update {
+    let mut result = Update::NotUpdated;
+
     info!("Updating sensors via MQTT topic: {}", msg.topic);
     for zone in zones.iter_mut() {
         match zone.update_via_mqtt_message(msg) {
             Ok(Update::Updated) => {
-                if let Err(e) = zone.evaluate_and_send_command().await {
-                    warn!(
-                        "Failed to evalueate zone {} and send air filter command: {:?}",
-                        zone.name(),
-                        e
-                    )
-                }
+                result = Update::Updated;
             }
             Ok(Update::NotUpdated) => {}
             Err(e) => warn!("Error when updateing zone {}: {:?}", zone.name(), e),
         }
     }
+
+    result
 }
 
-async fn update_zones_via_time(zones: &mut [Zone]) {
+async fn update_zones_via_time(zones: &mut [Zone]) -> Update {
+    let mut result = Update::NotUpdated;
+
     info!("Updating sensors on interval");
     for zone in zones.iter_mut() {
         match zone.update_via_time() {
             Ok(Update::Updated) => {
-                if let Err(e) = zone.evaluate_and_send_command().await {
-                    warn!(
-                        "Failed to evalueate zone {} and send air filter command: {:?}",
-                        zone.name(),
-                        e
-                    )
-                }
+                result = Update::Updated;
             }
             Ok(Update::NotUpdated) => {}
             Err(e) => warn!("Error when updateing zone {}: {:?}", zone.name(), e),
+        }
+    }
+
+    result
+}
+
+async fn evaluate_and_send_command(zones: &mut [Zone]) {
+    info!("Evaluating zones and sending updated commands");
+    for zone in zones {
+        if let Err(e) = zone.evaluate_and_send_command().await {
+            warn!(
+                "Failed to evalueate zone {} and send air filter command: {:?}",
+                zone.name(),
+                e
+            )
         }
     }
 }
