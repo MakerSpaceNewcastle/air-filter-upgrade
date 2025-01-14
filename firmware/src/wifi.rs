@@ -248,7 +248,7 @@ async fn run_mqtt_client(stack: Stack<'_>) -> Result<(), ()> {
                     match serde_json_core::to_vec::<_, 16>(&temperatures.onboard.ok()) {
                         Ok(data) => {
                             client
-                                .publish(env!("ONBOARD_TEMPERATURE_SENSOR_TOPIC"), &data, false)
+                                .publish(env!("ONBOARD_TEMPERATURE_SENSOR_TOPIC"), &data, true)
                                 .await?;
                         }
                         Err(e) => warn!("Failed to serialize message: {}", e),
@@ -262,7 +262,7 @@ async fn run_mqtt_client(stack: Stack<'_>) -> Result<(), ()> {
                 WaitResult::Message(fan) => {
                     let fan: &str = fan.into();
                     client
-                        .publish(env!("FAN_TOPIC"), fan.as_bytes(), false)
+                        .publish(env!("FAN_TOPIC"), fan.as_bytes(), true)
                         .await?;
                 }
             },
