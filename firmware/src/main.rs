@@ -83,9 +83,7 @@ async fn main(_spawner: Spawner) {
             let executor1 = EXECUTOR1.init(Executor::new());
             executor1.run(|spawner| {
                 unwrap!(spawner.spawn(watchdog_feed(r.status)));
-
                 unwrap!(spawner.spawn(crate::fan::task(r.fan_relays)));
-
                 unwrap!(spawner.spawn(crate::run_logic::task()));
             });
         },
@@ -94,9 +92,7 @@ async fn main(_spawner: Spawner) {
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
         unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
-
         unwrap!(spawner.spawn(crate::wifi::task(r.wifi, spawner)));
-
         unwrap!(spawner.spawn(initial_fan_trigger_task()));
     });
 }
@@ -104,7 +100,7 @@ async fn main(_spawner: Spawner) {
 #[embassy_executor::task]
 async fn watchdog_feed(r: StatusResources) {
     let mut watchdog = Watchdog::new(r.watchdog);
-    watchdog.start(Duration::from_millis(550));
+    watchdog.start(Duration::from_secs(2));
 
     loop {
         watchdog.feed();
