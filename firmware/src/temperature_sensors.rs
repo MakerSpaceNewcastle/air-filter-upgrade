@@ -39,7 +39,7 @@ pub(super) async fn task(r: crate::OnewireResources) {
     let onboard_temp_sensor =
         Ds18b20::new::<()>(Address(env!("BOARD_TEMP_SENSOR_ADDRESS").parse().unwrap())).unwrap();
 
-    let mut ticker = Ticker::every(Duration::from_secs(5));
+    let mut ticker = Ticker::every(Duration::from_secs(30));
     let publisher = TEMPERATURE_READING.publisher().unwrap();
 
     loop {
