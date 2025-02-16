@@ -9,11 +9,5 @@
     # Rust toolchain
     rustup
     probe-rs
-
-    # Extra tools for control program
-    cargo-cross
-
-    # Sensor firmware toolchain
-    esphome
   ];
 }
