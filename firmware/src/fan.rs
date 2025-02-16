@@ -1,13 +1,12 @@
-use defmt::{debug, warn, Format};
+use defmt::{debug, info, warn, Format};
 use embassy_rp::gpio::{Level, Output};
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     pubsub::{PubSubChannel, WaitResult},
 };
 use embassy_time::Timer;
-use ms_air_filter_protocol::FanSpeed;
 
-pub(crate) static FAN_SPEED: PubSubChannel<CriticalSectionRawMutex, FanCommand, 1, 2, 1> =
+pub(crate) static FAN_COMMAND: PubSubChannel<CriticalSectionRawMutex, FanCommand, 1, 2, 1> =
     PubSubChannel::new();
 
 #[derive(Clone, Format, Eq, PartialEq)]
@@ -16,14 +15,20 @@ pub(crate) enum FanCommand {
     Run(FanSpeed),
 }
 
-impl From<FanCommand> for &'static str {
-    fn from(value: FanCommand) -> Self {
-        match value {
-            FanCommand::Stop => "stop",
-            FanCommand::Run(FanSpeed::Low) => "low",
-            FanCommand::Run(FanSpeed::Medium) => "medium",
-            FanCommand::Run(FanSpeed::High) => "high",
-        }
+#[derive(Clone, Format, Eq, PartialEq)]
+pub(crate) enum FanSpeed {
+    Low,
+    Medium,
+    High,
+}
+
+impl FanSpeed {
+    pub(crate) fn cycle(&mut self) {
+        *self = match self {
+            Self::Low => Self::Medium,
+            Self::Medium => Self::High,
+            Self::High => Self::Low,
+        };
     }
 }
 
@@ -36,7 +41,7 @@ pub(super) async fn task(r: crate::FanRelayResources) {
 
     let mut last = FanCommand::Stop;
 
-    let mut rx = FAN_SPEED.subscriber().unwrap();
+    let mut rx = FAN_COMMAND.subscriber().unwrap();
 
     loop {
         match rx.next_message().await {
@@ -45,6 +50,7 @@ pub(super) async fn task(r: crate::FanRelayResources) {
             }
             WaitResult::Message(cmd) => {
                 if cmd != last {
+                    info!("Set fan to {:?}", cmd);
                     debug!("Open all speed selection contactors");
                     fan_low.set_low();
                     fan_medium.set_low();
