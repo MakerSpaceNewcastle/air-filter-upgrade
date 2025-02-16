@@ -1,24 +1,8 @@
-use defmt::{debug, info, Format};
-use ds18b20::{Ds18b20, Resolution};
+use defmt::{debug, info, warn};
+use ds18b20::Resolution;
 use embassy_rp::gpio::{Level, OutputOpenDrain};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, pubsub::PubSubChannel};
 use embassy_time::{Delay, Duration, Ticker, Timer};
-use one_wire_bus::{Address, OneWire};
-
-pub(crate) type TemperatureReading = Result<f32, ()>;
-
-#[derive(Clone, Format)]
-pub(crate) struct Temperatures {
-    pub(crate) onboard: TemperatureReading,
-}
-
-pub(crate) static TEMPERATURE_READING: PubSubChannel<
-    CriticalSectionRawMutex,
-    Temperatures,
-    8,
-    1,
-    1,
-> = PubSubChannel::new();
+use one_wire_bus::OneWire;
 
 #[embassy_executor::task]
 pub(super) async fn task(r: crate::OnewireResources) {
@@ -27,36 +11,43 @@ pub(super) async fn task(r: crate::OnewireResources) {
         OneWire::new(pin).unwrap()
     };
 
-    for device_address in bus.devices(false, &mut Delay) {
-        let device_address = device_address.unwrap();
-        info!("Found one wire device at address: {}", device_address.0);
-    }
-
-    info!(
-        "Configured board temperature sensor address: {}",
-        env!("BOARD_TEMP_SENSOR_ADDRESS")
-    );
-    let onboard_temp_sensor =
-        Ds18b20::new::<()>(Address(env!("BOARD_TEMP_SENSOR_ADDRESS").parse().unwrap())).unwrap();
-
-    let mut ticker = Ticker::every(Duration::from_secs(30));
-    let publisher = TEMPERATURE_READING.publisher().unwrap();
+    let mut ticker = Ticker::every(Duration::from_secs(10));
 
     loop {
-        ticker.next().await;
-
         ds18b20::start_simultaneous_temp_measurement(&mut bus, &mut Delay).unwrap();
 
         Timer::after_millis(Resolution::Bits12.max_measurement_time_millis() as u64).await;
 
-        let readings = Temperatures {
-            onboard: onboard_temp_sensor
-                .read_data(&mut bus, &mut Delay)
-                .map(|v| v.temperature)
-                .map_err(|_| ()),
-        };
+        let mut search_state = None;
+        while let Some((device_address, state)) = bus
+            .device_search(search_state.as_ref(), false, &mut Delay)
+            .unwrap()
+        {
+            search_state = Some(state);
 
-        debug!("Temperature readings: {}", readings);
-        publisher.publish(readings).await;
+            if device_address.family_code() == ds18b20::FAMILY_CODE {
+                debug!("Found DS18B20 at address: {}", device_address.0);
+
+                let sensor = ds18b20::Ds18b20::new::<()>(device_address).unwrap();
+                match sensor.read_data(&mut bus, &mut Delay) {
+                    Ok(sensor_data) => {
+                        info!(
+                            "DS18B20 {} is {}°C",
+                            device_address.0, sensor_data.temperature
+                        );
+                    }
+                    Err(_) => {
+                        warn!("Failed to read DS18B20 at {}", device_address.0);
+                    }
+                }
+            } else {
+                info!(
+                    "Found unknown one wire device at address: {}",
+                    device_address.0
+                );
+            }
+        }
+
+        ticker.next().await;
     }
 }

@@ -1,25 +1,24 @@
 #![no_std]
 #![no_main]
 
+mod buttons;
 mod fan;
-mod maybe_timer;
 mod run_logic;
 mod temperature_sensors;
-mod wifi;
 
 use defmt::{info, unwrap};
 use defmt_rtt as _;
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::{
+    gpio::{Level, Output},
     multicore::{spawn_core1, Stack},
     peripherals,
     watchdog::Watchdog,
 };
-use embassy_time::{Duration, Timer};
-use ms_air_filter_protocol::{ExternalCommand, ExternalFanCommand};
+use embassy_time::{Duration, Ticker};
 #[cfg(feature = "panic-probe")]
 use panic_probe as _;
-use run_logic::EXTERNAL_COMMAND;
+use portable_atomic as _;
 use static_cell::StaticCell;
 
 #[cfg(not(feature = "panic-probe"))]
@@ -31,14 +30,16 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     let r = split_resources!(p);
 
     // Turn off all fan output contactors
-    let r = r.fan_relays;
-    let _fan_high = Output::new(r.high, Level::Low);
-    let _fan_medium = Output::new(r.medium, Level::Low);
-    let _fan_low = Output::new(r.low, Level::Low);
-    let _contactor_voltage = Output::new(r.contactor_voltage, Level::Low);
+    let relays = r.fan_relays;
+    let _ = Output::new(relays.high, Level::Low);
+    let _ = Output::new(relays.medium, Level::Low);
+    let _ = Output::new(relays.low, Level::Low);
+    let _ = Output::new(relays.contactor_voltage, Level::Low);
 
+    let mut led = Output::new(r.status.led, Level::Low);
     loop {
-        embassy_time::block_for(Duration::from_secs(10));
+        embassy_time::block_for(Duration::from_hz(20));
+        led.toggle();
     }
 }
 
@@ -53,19 +54,16 @@ assign_resources::assign_resources! {
         high: PIN_7,
         contactor_voltage: PIN_17,
     },
+    buttons: ButtonResources {
+        demand: PIN_8, // Isolated input 7
+        speed_select: PIN_9, // Isolated input 6
+    },
     onewire: OnewireResources {
         data: PIN_22,
     },
     status: StatusResources {
         watchdog: WATCHDOG,
-    },
-    wifi: WifiResources {
-        pwr: PIN_23,
-        cs: PIN_25,
-        pio: PIO0,
-        dio: PIN_24,
-        clk: PIN_29,
-        dma_ch: DMA_CH0,
+        led: PIN_25,
     },
 }
 
@@ -85,6 +83,7 @@ async fn main(_spawner: Spawner) {
                 unwrap!(spawner.spawn(watchdog_feed(r.status)));
                 unwrap!(spawner.spawn(crate::fan::task(r.fan_relays)));
                 unwrap!(spawner.spawn(crate::run_logic::task()));
+                unwrap!(spawner.spawn(crate::buttons::task(r.buttons)));
             });
         },
     );
@@ -92,33 +91,22 @@ async fn main(_spawner: Spawner) {
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
         unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
-        unwrap!(spawner.spawn(crate::wifi::task(r.wifi, spawner)));
-        unwrap!(spawner.spawn(initial_fan_trigger_task()));
     });
 }
 
 #[embassy_executor::task]
 async fn watchdog_feed(r: StatusResources) {
+    let mut led = Output::new(r.led, Level::Low);
+
     let mut watchdog = Watchdog::new(r.watchdog);
     watchdog.start(Duration::from_secs(2));
 
+    let mut ticker = Ticker::every(Duration::from_secs(1));
+
     loop {
+        ticker.next().await;
+
         watchdog.feed();
-        Timer::after_millis(500).await;
+        led.toggle();
     }
-}
-
-#[embassy_executor::task]
-async fn initial_fan_trigger_task() {
-    let cmd_pub = EXTERNAL_COMMAND.publisher().unwrap();
-
-    Timer::after_secs(5).await;
-
-    info!("Triggering initial fan run after power on");
-    cmd_pub
-        .publish(ExternalCommand {
-            fan: Some(ExternalFanCommand::RunFor { seconds: 300 }),
-            speed: None,
-        })
-        .await;
 }

@@ -1,4 +1,4 @@
-# Automatic Air Filter Upgrade
+# Air Filter Upgrade
 
 Upgraded control system for Axminster air filter units.
 
