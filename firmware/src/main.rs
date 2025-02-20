@@ -2,6 +2,7 @@
 #![no_main]
 
 mod buttons;
+mod display;
 mod fan;
 mod run_logic;
 mod temperature_sensors;
@@ -58,6 +59,16 @@ assign_resources::assign_resources! {
         demand: PIN_8, // Isolated input 7
         speed_select: PIN_9, // Isolated input 6
     },
+    display: DisplayResources {
+        spi: SPI0,
+        clk: PIN_2,
+        mosi: PIN_3,
+        miso: PIN_4,
+        dc: PIN_0,
+        rst: PIN_1,
+        backlight: PIN_5,
+        backlight_pwm: PWM_SLICE2,
+    },
     onewire: OnewireResources {
         data: PIN_22,
     },
@@ -90,7 +101,8 @@ async fn main(_spawner: Spawner) {
 
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
-        unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
+        // TODO unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
+        unwrap!(spawner.spawn(crate::display::task(r.display)));
     });
 }
 

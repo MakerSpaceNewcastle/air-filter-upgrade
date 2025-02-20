@@ -30,6 +30,10 @@ impl Trigger for ManualButtonTrigger {
             None => FanCommand::Stop,
         }
     }
+
+    fn time_remaining(&self) -> Option<Duration> {
+        self.time_remaining
+    }
 }
 
 impl ManualButtonTrigger {

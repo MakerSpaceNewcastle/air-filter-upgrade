@@ -25,9 +25,19 @@ embassy-futures = "0.1.1"
 portable-atomic = { version = "1.9.0", features = ["critical-section"] }
 static_cell = "2.1.0"
 
+embedded-hal = "1.0.0"
+embassy-embedded-hal = { version = "0.3.0", features = ["defmt"] }
+
 # Temperature sensors
 one-wire-bus = "0.1.1"
 ds18b20 = "0.1.1"
+
+# Display
+mipidsi = "0.9.0"
+embedded-graphics = "0.8.1"
+u8g2-fonts = { version = "0.5.2", features = ["embedded_graphics_textstyle"] }
+
+heapless = "0.8.0"
 
 [profile.release]
 debug = 2
