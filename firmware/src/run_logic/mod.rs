@@ -10,14 +10,15 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     pubsub::{PubSubChannel, WaitResult},
 };
-use embassy_time::{Duration, Ticker};
+use embassy_time::{Duration, Ticker, Timer};
 use manual_button_trigger::ManualButtonTrigger;
 
 pub(crate) static STATE_CHANGED: PubSubChannel<CriticalSectionRawMutex, State, 1, 2, 1> =
     PubSubChannel::new();
 
-trait Trigger {
+pub(crate) trait Trigger {
     fn fan_command(&self) -> FanCommand;
+    fn time_remaining(&self) -> Option<Duration>;
 }
 
 #[derive(Clone, Default, Format)]
@@ -29,6 +30,10 @@ impl Trigger for State {
     fn fan_command(&self) -> FanCommand {
         self.button_trigger.fan_command()
     }
+
+    fn time_remaining(&self) -> Option<Duration> {
+        self.button_trigger.time_remaining()
+    }
 }
 
 #[embassy_executor::task]
@@ -39,6 +44,10 @@ pub(super) async fn task() {
     let mut button_sub = BUTTON_EVENTS.subscriber().unwrap();
     let state_pub = STATE_CHANGED.publisher().unwrap();
     let fan_pub = FAN_COMMAND.publisher().unwrap();
+
+    // Publish an empty state initially (this should be sent while the splash screen is on display)
+    Timer::after_millis(500).await;
+    state_pub.publish(state.clone()).await;
 
     loop {
         let changed = match select(tick_1hz.next(), button_sub.next_message()).await {
