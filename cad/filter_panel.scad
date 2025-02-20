@@ -52,6 +52,12 @@ module AuxDigitalInputsSocket() {
   }
 }
 
+module DisplayMountingHoles() {
+  ArrangeCentres2D([23, 34.5]) {
+    circle(d = 2.2, $fn = 24);
+  }
+}
+
 difference() {
   Panel();
 
@@ -61,7 +67,13 @@ difference() {
     PowerSocket();
   }
 
-  translate([15, 40]) {
-    AuxDigitalInputsSocket();
+  translate([-35, 30]) {
+    rotate([0, 0, 90]) {
+      AuxDigitalInputsSocket();
+    }
+  }
+
+  translate([30, 30]) {
+    DisplayMountingHoles();
   }
 }
