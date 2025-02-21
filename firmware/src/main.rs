@@ -101,7 +101,7 @@ async fn main(_spawner: Spawner) {
 
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
-        // TODO unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
+        unwrap!(spawner.spawn(crate::temperature_sensors::task(r.onewire)));
         unwrap!(spawner.spawn(crate::display::task(r.display)));
     });
 }
