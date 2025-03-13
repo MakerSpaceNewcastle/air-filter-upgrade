@@ -1,15 +1,10 @@
 use defmt::{debug, info, warn};
 use ds18b20::Resolution;
-use embassy_rp::gpio::{Level, OutputOpenDrain};
 use embassy_time::{Delay, Duration, Ticker, Timer};
-use one_wire_bus::OneWire;
 
 #[embassy_executor::task]
 pub(super) async fn task(r: crate::OnewireResources) {
-    let mut bus = {
-        let pin = OutputOpenDrain::new(r.data, Level::Low);
-        OneWire::new(pin).unwrap()
-    };
+    let mut bus = pico_plc_bsp::onewire::new(r.data).unwrap();
 
     let mut ticker = Ticker::every(Duration::from_secs(10));
 
