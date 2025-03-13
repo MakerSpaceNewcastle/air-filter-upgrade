@@ -13,21 +13,51 @@ use embassy_executor::{Executor, Spawner};
 use embassy_rp::{
     gpio::{Level, Output},
     multicore::{spawn_core1, Stack},
-    peripherals,
     watchdog::Watchdog,
 };
 use embassy_time::{Duration, Ticker};
 #[cfg(feature = "panic-probe")]
 use panic_probe as _;
+use pico_plc_bsp::peripherals::{self, PicoPlc};
 use portable_atomic as _;
 use static_cell::StaticCell;
+
+assign_resources::assign_resources! {
+    fan_relays: FanRelayResources {
+        low: RELAY_2,
+        medium: RELAY_1,
+        high: RELAY_0,
+        contactor_voltage: RELAY_3,
+    },
+    buttons: ButtonResources {
+        demand: IN_7,
+        speed_select: IN_6,
+    },
+    display: DisplayResources {
+        spi: SPI0,
+        clk: IO_2,
+        mosi: IO_3,
+        miso: IO_4,
+        dc: IO_0,
+        rst: IO_1,
+        backlight: IO_5,
+        backlight_pwm: PWM_SLICE2,
+    },
+    onewire: OnewireResources {
+        data: ONEWIRE,
+    },
+    status: StatusResources {
+        watchdog: WATCHDOG,
+        led: PIN_25,
+    },
+}
 
 #[cfg(not(feature = "panic-probe"))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     use embassy_rp::gpio::{Level, Output};
 
-    let p = unsafe { embassy_rp::Peripherals::steal() };
+    let p = unsafe { PicoPlc::steal() };
     let r = split_resources!(p);
 
     // Turn off all fan output contactors
@@ -48,39 +78,9 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-assign_resources::assign_resources! {
-    fan_relays: FanRelayResources {
-        low: PIN_16,
-        medium: PIN_6,
-        high: PIN_7,
-        contactor_voltage: PIN_17,
-    },
-    buttons: ButtonResources {
-        demand: PIN_8, // Isolated input 7
-        speed_select: PIN_9, // Isolated input 6
-    },
-    display: DisplayResources {
-        spi: SPI0,
-        clk: PIN_2,
-        mosi: PIN_3,
-        miso: PIN_4,
-        dc: PIN_0,
-        rst: PIN_1,
-        backlight: PIN_5,
-        backlight_pwm: PWM_SLICE2,
-    },
-    onewire: OnewireResources {
-        data: PIN_22,
-    },
-    status: StatusResources {
-        watchdog: WATCHDOG,
-        led: PIN_25,
-    },
-}
-
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let p = embassy_rp::init(Default::default());
+    let p = PicoPlc::default();
     let r = split_resources!(p);
 
     info!("Version: {}", env!("VERSION"));
