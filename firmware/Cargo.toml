@@ -10,7 +10,7 @@ panic-probe = ["dep:panic-probe"]
 
 [dependencies]
 cortex-m-rt = "0.7.3"
-embassy-rp = { version = "0.3.1", features = ["rp2040", "defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
+embassy-rp = { version = "0.4.0", features = ["rp2040", "defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
 pico-plc-bsp = { git = "https://github.com/DanNixon/pico-plc" }
 assign-resources = "0.4.1"
 
